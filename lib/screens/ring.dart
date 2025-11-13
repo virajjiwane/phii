@@ -4,6 +4,8 @@ import 'package:alarm/alarm.dart';
 import 'package:alarm/utils/alarm_set.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import '../models/profile.dart';
 
 class AlarmRingScreen extends StatefulWidget {
   const AlarmRingScreen({required this.alarmSettings, super.key});
@@ -93,6 +95,19 @@ class _AlarmRingScreenState extends State<AlarmRingScreen>
 
   Future<void> _handleStop() async {
     await Alarm.stop(widget.alarmSettings.id);
+    
+    // Stop all upcoming alarms in the same profile
+    final profilesBox = Hive.box<Profile>('profiles');
+    for (var profile in profilesBox.values) {
+      if (profile.alarmIds.contains(widget.alarmSettings.id)) {
+        // Found the profile, stop all its alarms
+        for (var alarmId in profile.alarmIds) {
+          await Alarm.stop(alarmId);
+        }
+        break;
+      }
+    }
+    
     if (mounted) {
       Navigator.pop(context);
     }

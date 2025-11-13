@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
+  // Custom text style for home page title
+  static TextStyle get homeTitleStyle => GoogleFonts.dancingScript(
+    fontSize: 36,
+    fontWeight: FontWeight.bold,
+    color: Colors.orange,
+  );
+  
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
     colorScheme: ColorScheme.fromSeed(

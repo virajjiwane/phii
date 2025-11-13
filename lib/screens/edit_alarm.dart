@@ -1,16 +1,25 @@
 import 'package:alarm/alarm.dart';
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import '../models/profile.dart';
 
 class EditAlarmScreen extends StatefulWidget {
-  const EditAlarmScreen({super.key, this.alarmSettings});
+  const EditAlarmScreen({
+    super.key,
+    this.alarmSettings,
+    this.profileId,
+    this.onAlarmCreated,
+  });
 
   final AlarmSettings? alarmSettings;
+  final String? profileId;
+  final Function(AlarmSettings, String?)? onAlarmCreated;
 
   @override
   State<EditAlarmScreen> createState() => _EditAlarmScreenState();
 }
 
-class _EditAlarmScreenState extends State<EditAlarmScreen> 
+class _EditAlarmScreenState extends State<EditAlarmScreen>
     with TickerProviderStateMixin {
   bool loading = false;
 
@@ -22,10 +31,10 @@ class _EditAlarmScreenState extends State<EditAlarmScreen>
   late Duration? fadeDuration;
   late bool staircaseFade;
   late String assetAudio;
-  
+
   late AnimationController _slideController;
   late Animation<Offset> _slideAnimation;
-  
+
   late PageController _pageController;
   int _currentPage = 0;
 
@@ -40,12 +49,12 @@ class _EditAlarmScreenState extends State<EditAlarmScreen>
   void initState() {
     super.initState();
     creating = widget.alarmSettings == null;
-    
+
     _slideController = AnimationController(
       duration: const Duration(milliseconds: 400),
       vsync: this,
     );
-    
+
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.1),
       end: Offset.zero,
@@ -53,9 +62,9 @@ class _EditAlarmScreenState extends State<EditAlarmScreen>
       parent: _slideController,
       curve: Curves.easeOut,
     ));
-    
+
     _pageController = PageController();
-    
+
     _slideController.forward();
 
     if (creating) {
@@ -164,14 +173,53 @@ class _EditAlarmScreenState extends State<EditAlarmScreen>
   void saveAlarm() {
     if (loading) return;
     setState(() => loading = true);
-    Alarm.set(alarmSettings: buildAlarmSettings()).then((res) {
-      if (res && mounted) Navigator.pop(context, true);
+    
+    final alarmSettings = buildAlarmSettings();
+    
+    Alarm.set(alarmSettings: alarmSettings).then((res) async {
+      if (res) {
+        String? targetProfileId = widget.profileId;
+
+        // If no profileId provided, create a new profile
+        if (targetProfileId == null) {
+          final profilesBox = Hive.box<Profile>('profiles');
+          final newProfile = Profile(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            name: alarmSettings.notificationSettings.title,
+            alarmIds: [alarmSettings.id],
+          );
+          await profilesBox.put(newProfile.id, newProfile);
+          targetProfileId = newProfile.id;
+        } else {
+          // Add to existing profile
+          final profilesBox = Hive.box<Profile>('profiles');
+          final profile = profilesBox.get(targetProfileId);
+          if (profile != null) {
+            profile.alarmIds.add(alarmSettings.id);
+            await profile.save();
+          }
+        }
+
+        // Call the callback if provided
+        widget.onAlarmCreated?.call(alarmSettings, targetProfileId);
+        
+        if (mounted) Navigator.pop(context, true);
+      }
       setState(() => loading = false);
     });
   }
 
   void deleteAlarm() {
     Alarm.stop(widget.alarmSettings!.id).then((res) {
+      if (widget.profileId != null) {
+        final profile = Hive.box<Profile>('profiles').get(widget.profileId!);
+        profile?.alarmIds.remove(widget.alarmSettings!.id);
+        profile?.save();
+        // If no alarms, delete profile?
+        if (profile != null && profile.alarmIds.isEmpty) {
+          Hive.box<Profile>('profiles').delete(profile.id);
+        }
+      }
       if (res && mounted) Navigator.pop(context, true);
     });
   }
@@ -180,7 +228,7 @@ class _EditAlarmScreenState extends State<EditAlarmScreen>
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    
+
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
@@ -231,16 +279,16 @@ class _EditAlarmScreenState extends State<EditAlarmScreen>
                 children: [
                   // Page 1: Time Picker
                   _buildTimePickerPage(colorScheme, textTheme),
-                  
+
                   // Page 2: Audio Settings
                   _buildAudioSettingsPage(colorScheme, textTheme),
-                  
+
                   // Page 3: Volume Settings
                   _buildVolumeSettingsPage(colorScheme, textTheme),
                 ],
               ),
             ),
-            
+
             // Page Indicators
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 24),
@@ -263,7 +311,7 @@ class _EditAlarmScreenState extends State<EditAlarmScreen>
                 ),
               ),
             ),
-            
+
             // Navigation Hint
             if (_currentPage == 0)
               Padding(
@@ -286,7 +334,7 @@ class _EditAlarmScreenState extends State<EditAlarmScreen>
                   ],
                 ),
               ),
-            
+
             // Delete button (only when editing)
             if (!creating && _currentPage == 2)
               Padding(
@@ -321,7 +369,7 @@ class _EditAlarmScreenState extends State<EditAlarmScreen>
       ),
     );
   }
-  
+
   Widget _buildTimePickerPage(ColorScheme colorScheme, TextTheme textTheme) {
     return Center(
       child: Column(
@@ -377,7 +425,7 @@ class _EditAlarmScreenState extends State<EditAlarmScreen>
       ),
     );
   }
-  
+
   Widget _buildAudioSettingsPage(ColorScheme colorScheme, TextTheme textTheme) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -454,7 +502,7 @@ class _EditAlarmScreenState extends State<EditAlarmScreen>
       ),
     );
   }
-  
+
   Widget _buildVolumeSettingsPage(ColorScheme colorScheme, TextTheme textTheme) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -556,7 +604,7 @@ class _EditAlarmScreenState extends State<EditAlarmScreen>
       ),
     );
   }
-  
+
   Widget _buildSettingCard({
     required Widget child,
     required ColorScheme colorScheme,
@@ -572,7 +620,7 @@ class _EditAlarmScreenState extends State<EditAlarmScreen>
       child: child,
     );
   }
-  
+
   Widget _buildSwitchTile({
     required String title,
     String? subtitle,
@@ -615,7 +663,7 @@ class _EditAlarmScreenState extends State<EditAlarmScreen>
       ),
     );
   }
-  
+
   Widget _buildDropdownTile<T>({
     required String title,
     String? subtitle,
@@ -668,7 +716,7 @@ class _EditAlarmScreenState extends State<EditAlarmScreen>
       ),
     );
   }
-  
+
   Widget _buildDivider(ColorScheme colorScheme) {
     return Divider(
       height: 1,

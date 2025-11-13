@@ -1,35 +1,32 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:alarm/alarm.dart';
-import 'package:alarm/utils/alarm_set.dart';
-import 'package:phii/core/services/notifications.dart';
-import 'package:phii/core/services/permission.dart';
-import 'package:phii/screens/ring.dart';
-import 'package:phii/screens/edit_alarm.dart';
-import 'package:phii/screens/shortcut_button.dart';
-import 'package:phii/widgets/tile.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import '../models/profile.dart';
+import '../core/themes/app_theme.dart';
+import 'profile_screen.dart';
+import 'edit_alarm.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  _HomeScreenState createState() => _HomeScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
-   List<AlarmSettings> alarms = [];
-  Notifications? notifications;
-
-  static StreamSubscription<AlarmSet>? ringSubscription;
-  static StreamSubscription<AlarmSet>? updateSubscription;
-
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
+  late Box<Profile> profilesBox;
   late AnimationController _fabAnimationController;
   late Animation<double> _fabScaleAnimation;
 
   @override
   void initState() {
     super.initState();
-    
+
+    // Initialize profiles box
+    profilesBox = Hive.box<Profile>('profiles');
+
     // FAB animation controller
     _fabAnimationController = AnimationController(
       duration: const Duration(milliseconds: 200),
@@ -38,127 +35,132 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _fabScaleAnimation = Tween<double>(begin: 1.0, end: 0.9).animate(
       CurvedAnimation(parent: _fabAnimationController, curve: Curves.easeInOut),
     );
-    
-    AlarmPermissions.checkNotificationPermission().then(
-      (_) => AlarmPermissions.checkAndroidScheduleExactAlarmPermission(),
-    );
-    loadAlarms();
-    ringSubscription ??= Alarm.ringing.listen(ringingAlarmsChanged);
-    updateSubscription ??= Alarm.scheduled.listen((_) {
-      loadAlarms();
-    });
   }
 
   @override
   void dispose() {
-    ringSubscription?.cancel();
-    updateSubscription?.cancel();
     _fabAnimationController.dispose();
     super.dispose();
   }
 
-  void loadAlarms() async {
-    final updatedAlarms = await Alarm.getAlarms();
-    updatedAlarms.sort((a, b) => a.dateTime.isBefore(b.dateTime) ? 0 : 1);
-    setState(() {
-      alarms = updatedAlarms;
-    });
+  Future<AlarmSettings?> _getMostRecentAlarm(Profile profile) async {
+    if (profile.alarmIds.isEmpty) return null;
+
+    AlarmSettings? mostRecent;
+    DateTime? closestTime;
+    final now = DateTime.now();
+
+    for (final alarmId in profile.alarmIds) {
+      final alarm = await Alarm.getAlarm(alarmId);
+      if (alarm != null) {
+        final difference = alarm.dateTime.difference(now);
+        if (!difference.isNegative) {
+          if (closestTime == null || alarm.dateTime.isBefore(closestTime)) {
+            closestTime = alarm.dateTime;
+            mostRecent = alarm;
+          }
+        }
+      }
+    }
+
+    return mostRecent;
   }
 
-  void ringingAlarmsChanged(AlarmSet alarms) async {
-    if (alarms.alarms.isEmpty) return;
-    await Navigator.push(
+  String _getAlarmLabel(AlarmSettings alarm) {
+    final now = DateTime.now();
+    final alarmTime = alarm.dateTime;
+    final difference = alarmTime.difference(now);
+
+    if (difference.isNegative) {
+      return 'Passed';
+    } else if (difference.inMinutes < 60) {
+      return 'In ${difference.inMinutes} minutes';
+    } else if (difference.inHours < 24) {
+      return 'In ${difference.inHours} hours';
+    } else {
+      final days = difference.inDays;
+      return 'In $days day${days > 1 ? 's' : ''}';
+    }
+  }
+
+  void _navigateToProfile(String profileId) {
+    Navigator.push(
       context,
-      MaterialPageRoute<void>(
-        builder: (context) =>
-            AlarmRingScreen(alarmSettings: alarms.alarms.first),
+      MaterialPageRoute(
+        builder: (context) => ProfileScreen(profileId: profileId),
       ),
     );
-    loadAlarms();
   }
 
-  Future<void> navigateToAlarmScreen(AlarmSettings? settings) async {
-    final res = await showModalBottomSheet<bool?>(
-      context: context,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-      ),
-      builder: (context) {
-        return FractionallySizedBox(
-          heightFactor: 0.85,
-          child: EditAlarmScreen(alarmSettings: settings),
-        );
-      },
-    );
-
-    if (res != null && res == true) loadAlarms();
-  }
- @override
+  @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    
+
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
         title: Text(
-          'Alarms',
-          style: textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          'Phii',
+          style: AppTheme.homeTitleStyle,
         ),
         centerTitle: false,
         actions: [
-          if (notifications != null)
             PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert_rounded, color: colorScheme.onSurface),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              onSelected: (value) async {
-                if (value == 'Show notification') {
-                  await notifications?.showNotification();
-                } else if (value == 'Schedule notification') {
-                  await notifications?.scheduleNotification();
-                }
-              },
-              itemBuilder: (BuildContext context) => [
-                PopupMenuItem<String>(
-                  value: 'Show notification',
-                  child: Row(
-                    children: [
-                      Icon(Icons.notifications_outlined, 
-                        color: colorScheme.primary, size: 20),
-                      const SizedBox(width: 12),
-                      const Text('Show notification'),
-                    ],
-                  ),
-                ),
-                PopupMenuItem<String>(
-                  value: 'Schedule notification',
-                  child: Row(
-                    children: [
-                      Icon(Icons.schedule_outlined, 
-                        color: colorScheme.primary, size: 20),
-                      const SizedBox(width: 12),
-                      const Text('Schedule notification'),
-                    ],
-                  ),
-                ),
-              ],
+            icon: Icon(Icons.more_vert_rounded, color: colorScheme.onSurface),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
+            onSelected: (value) {
+              if (value == 'settings') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                builder: (context) => const SettingsScreen(),
+                ),
+              );
+              }
+            },
+            itemBuilder: (BuildContext context) => [
+              PopupMenuItem<String>(
+              value: 'settings',
+              child: Row(
+                children: [
+                Icon(Icons.settings_outlined,
+                  color: colorScheme.primary, size: 20),
+                const SizedBox(width: 12),
+                const Text('Settings'),
+                ],
+              ),
+              ),
+            ],
+          ),
         ],
       ),
       body: SafeArea(
-        child: alarms.isEmpty 
-            ? _buildEmptyState(colorScheme, textTheme)
-            : _buildAlarmsList(),
+        child: ValueListenableBuilder(
+          valueListenable: profilesBox.listenable(),
+          builder: (context, Box<Profile> box, _) {
+            final profiles = box.values.toList();
+
+            return profiles.isEmpty
+                ? _buildEmptyState(colorScheme, textTheme)
+                : _buildProfilesList(profiles, colorScheme, textTheme);
+          },
+        ),
       ),
-      floatingActionButton: _buildFloatingActionButtons(colorScheme),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: ValueListenableBuilder(
+        valueListenable: profilesBox.listenable(),
+        builder: (context, Box<Profile> box, _) {
+          final profiles = box.values.toList();
+          return profiles.isEmpty
+              ? const SizedBox.shrink()
+              : _buildFloatingActionButton(colorScheme);
+        },
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
@@ -167,21 +169,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            'No alarms set',
-            style: textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w600,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+            Icon(Icons.alarm_off_outlined,
+                size: 24, color: colorScheme.onSurface.withValues(alpha: 0.6)),
+            const SizedBox(width: 8),
+            Text(
+              'No Alarms',
+              style: textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
+          ]),
           const SizedBox(height: 8),
           Text(
-            'Create your first alarm',
+            'Create your first alarm!',
             style: textTheme.bodyLarge?.copyWith(
               color: colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: 48),
-          
+
           // Big circular "+" button
           GestureDetector(
             onTapDown: (_) => _fabAnimationController.forward(),
@@ -190,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             child: ScaleTransition(
               scale: _fabScaleAnimation,
               child: InkWell(
-                onTap: () => navigateToAlarmScreen(null),
+                onTap: _showCreateProfileDialog,
                 customBorder: const CircleBorder(),
                 child: Container(
                   width: 100,
@@ -222,70 +231,264 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ),
             ),
           ),
-          
-          const SizedBox(height: 24),
-          
-          // Small RING NOW button
-          TextButton.icon(
-            onPressed: () async {
-              final now = DateTime.now();
-              final alarmSettings = AlarmSettings(
-                id: DateTime.now().millisecondsSinceEpoch % 10000,
-                dateTime: now,
-                assetAudioPath: 'assets/marimba.mp3',
-                volumeSettings: VolumeSettings.fixed(volume: 0.5),
-                notificationSettings: const NotificationSettings(
-                  title: 'Quick Alarm',
-                  body: 'Immediate alarm',
-                  icon: 'notification_icon',
-                ),
-              );
-              await Alarm.set(alarmSettings: alarmSettings);
-              loadAlarms();
-            },
-            icon: Icon(
-              Icons.alarm_on_rounded,
-              size: 18,
-              color: colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-            label: Text(
-              'RING NOW',
-              style: textTheme.labelLarge?.copyWith(
-                color: colorScheme.onSurface.withValues(alpha: 0.6),
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.5,
-              ),
-            ),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              backgroundColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildAlarmsList() {
+  Widget _buildProfilesList(
+      List<Profile> profiles, ColorScheme colorScheme, TextTheme textTheme) {
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-      itemCount: alarms.length,
+      itemCount: profiles.length,
       itemBuilder: (context, index) {
+        final profile = profiles[index];
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
-          child: AlarmTile(
-            key: Key(alarms[index].id.toString()),
-            title: TimeOfDay(
-              hour: alarms[index].dateTime.hour,
-              minute: alarms[index].dateTime.minute,
-            ).format(context),
-            subtitle: _getAlarmLabel(alarms[index]),
-            onPressed: () => navigateToAlarmScreen(alarms[index]),
-            onDismissed: () {
-              Alarm.stop(alarms[index].id).then((_) => loadAlarms());
+          child: _buildProfileCard(profile, colorScheme, textTheme),
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileCard(
+      Profile profile, ColorScheme colorScheme, TextTheme textTheme) {
+    return FutureBuilder<AlarmSettings?>(
+      future: _getMostRecentAlarm(profile),
+      builder: (context, snapshot) {
+        final mostRecentAlarm = snapshot.data;
+
+        return Dismissible(
+          key: Key(profile.id),
+          direction: DismissDirection.endToStart,
+          background: Container(
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 24),
+            decoration: BoxDecoration(
+              color: colorScheme.error,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.delete_outline_rounded,
+                  color: colorScheme.onError,
+                  size: 28,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Delete',
+                  style: TextStyle(
+                    color: colorScheme.onError,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          confirmDismiss: (direction) => _confirmDeleteProfile(profile),
+          onDismissed: (direction) => _deleteProfile(profile),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => _navigateToProfile(profile.id),
+              borderRadius: BorderRadius.circular(24),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      colorScheme.primaryContainer,
+                      colorScheme.secondaryContainer,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: colorScheme.primary.withValues(alpha: 0.15),
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    // Profile Icon
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.folder_outlined,
+                        color: colorScheme.primary,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+
+                    // Profile Info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            profile.name,
+                            style: textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.onPrimaryContainer,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          if (mostRecentAlarm != null)
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.alarm_rounded,
+                                  size: 16,
+                                  color: colorScheme.onPrimaryContainer
+                                      .withValues(alpha: 0.7),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  TimeOfDay(
+                                    hour: mostRecentAlarm.dateTime.hour,
+                                    minute: mostRecentAlarm.dateTime.minute,
+                                  ).format(context),
+                                  style: textTheme.bodyLarge?.copyWith(
+                                    color: colorScheme.onPrimaryContainer
+                                        .withValues(alpha: 0.9),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '• ${_getAlarmLabel(mostRecentAlarm)}',
+                                  style: textTheme.bodyMedium?.copyWith(
+                                    color: colorScheme.onPrimaryContainer
+                                        .withValues(alpha: 0.7),
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.alarm_off_rounded,
+                                  size: 16,
+                                  color: colorScheme.onPrimaryContainer
+                                      .withValues(alpha: 0.5),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'No alarms set',
+                                  style: textTheme.bodyMedium?.copyWith(
+                                    color: colorScheme.onPrimaryContainer
+                                        .withValues(alpha: 0.6),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${profile.alarmIds.length} alarm${profile.alarmIds.length != 1 ? 's' : ''}',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onPrimaryContainer
+                                  .withValues(alpha: 0.5),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Arrow
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color:
+                          colorScheme.onPrimaryContainer.withValues(alpha: 0.5),
+                      size: 18,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFloatingActionButton(ColorScheme colorScheme) {
+    return ScaleTransition(
+      scale: _fabScaleAnimation,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              colorScheme.primary,
+              colorScheme.secondary,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: colorScheme.primary.withValues(alpha: 0.4),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              _fabAnimationController
+                  .forward()
+                  .then((_) => _fabAnimationController.reverse());
+              _showCreateProfileDialog();
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: const Padding(
+              padding: EdgeInsets.all(16),
+              child: Icon(
+                Icons.add_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showCreateProfileDialog() async {
+    final result = await showModalBottomSheet<bool?>(
+      context: context,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+      ),
+      builder: (context) {
+        return FractionallySizedBox(
+          heightFactor: 0.85,
+          child: EditAlarmScreen(
+            alarmSettings: null,
+            profileId: null, // null means create new profile
+            onAlarmCreated: (alarmSettings, profileId) {
+              // Navigate to the newly created profile
+              if (profileId != null) {
+                _navigateToProfile(profileId);
+              }
             },
           ),
         );
@@ -293,136 +496,57 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  String _getAlarmLabel(AlarmSettings alarm) {
-    final now = DateTime.now();
-    final alarmTime = alarm.dateTime;
-    final difference = alarmTime.difference(now);
-    
-    if (difference.isNegative) {
-      return 'Passed';
-    } else if (difference.inMinutes < 60) {
-      return 'In ${difference.inMinutes} minutes';
-    } else if (difference.inHours < 24) {
-      return 'In ${difference.inHours} hours';
-    } else {
-      final days = difference.inDays;
-      return 'In $days day${days > 1 ? 's' : ''}';
-    }
-  }
-
-  Widget _buildFloatingActionButtons(ColorScheme colorScheme) {
-    if (alarms.isEmpty) {
-      return const SizedBox.shrink(); // No FAB when no alarms
-    }
-    
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Quick alarm button
-          ExampleAlarmHomeShortcutButton(refreshAlarms: loadAlarms),
-          
-          Row(
-            children: [
-              // Stop all button
-              Container(
-                margin: const EdgeInsets.only(right: 12),
-                decoration: BoxDecoration(
-                  color: colorScheme.errorContainer,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: colorScheme.error.withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      Alarm.stopAll().then((_) => loadAlarms());
-                    },
-                    borderRadius: BorderRadius.circular(16),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.stop_circle_outlined,
-                            color: colorScheme.error,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Stop All',
-                            style: TextStyle(
-                              color: colorScheme.error,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              
-              // Add alarm button
-              ScaleTransition(
-                scale: _fabScaleAnimation,
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        colorScheme.primary,
-                        colorScheme.secondary,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: colorScheme.primary.withValues(alpha: 0.4),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () {
-                        _fabAnimationController.forward().then(
-                          (_) => _fabAnimationController.reverse()
-                        );
-                        navigateToAlarmScreen(null);
-                      },
-                      borderRadius: BorderRadius.circular(16),
-                      child: const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Icon(
-                          Icons.add_rounded,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+  Future<bool?> _confirmDeleteProfile(Profile profile) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Text('Delete Profile'),
+        content: Text(
+          'Are you sure you want to delete "${profile.name}"? All alarms in this profile will be removed.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Delete'),
           ),
         ],
       ),
+    );
+  }
+
+  void _deleteProfile(Profile profile) {
+    // Stop all alarms in the profile
+    for (final alarmId in profile.alarmIds) {
+      Alarm.stop(alarmId);
+    }
+    // Delete the profile
+    profilesBox.delete(profile.id);
+  }
+}
+
+// Add this helper widget at the end of the file, before the closing brace
+class _CreateAlarmWithProfileWrapper extends StatelessWidget {
+  const _CreateAlarmWithProfileWrapper({required this.onComplete});
+
+  final Function(String?) onComplete;
+
+  @override
+  Widget build(BuildContext context) {
+    // This will be replaced with actual EditAlarmScreen integration
+    // For now, show a simple dialog to create alarm
+    return EditAlarmScreen(
+      alarmSettings: null,
+      profileId: '__CREATE_NEW__', // Special marker to create new profile
     );
   }
 }

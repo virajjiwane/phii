@@ -40,6 +40,8 @@ dependencies:
   timezone: ^0.10.1
   url_launcher: ^6.3.2
   google_fonts: ^6.3.2
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -55,6 +57,10 @@ dev_dependencies:
   # rules and activating additional ones.
   very_good_analysis: ^10.0.0
   flutter_launcher_icons: "^0.14.4"
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.13
+  analyzer: ^6.4.1
+  flutter_native_splash: ^2.4.7
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -75,6 +81,7 @@ flutter:
     - assets/one_piece.mp3
     - assets/star_wars.mp3
     - assets/icons/launcher_icon.png
+    - assets/icons/launcher_icon_background_removed.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -111,3 +118,12 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/icons/launcher_icon.png"
   adaptive_icon_background: "#0b0b0b"
+
+flutter_native_splash:
+  # Background color (hex or color name)
+  color: "#0b0b0b"
+  # or use an image background
+  # background_image: "assets/background.png"
+  
+  # App icon/logo
+  image: assets/icons/launcher_icon_background_removed.png

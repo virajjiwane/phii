@@ -7,9 +7,11 @@ class ExampleAlarmHomeShortcutButton extends StatefulWidget {
   const ExampleAlarmHomeShortcutButton({
     required this.refreshAlarms,
     super.key,
+    this.profileId,
   });
 
   final void Function() refreshAlarms;
+  final String? profileId;
 
   @override
   State<ExampleAlarmHomeShortcutButton> createState() =>
