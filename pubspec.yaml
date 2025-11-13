@@ -1,5 +1,5 @@
 name: phii
-description: "A new Flutter project."
+description: "⏰ Grouped alarms, smooth animations, and everything nice — Phii, a modern Flutter-based alarm app built for precision, calm, and control."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -54,6 +54,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   very_good_analysis: ^10.0.0
+  flutter_launcher_icons: "^0.14.4"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -73,6 +74,7 @@ flutter:
     - assets/nokia.mp3
     - assets/one_piece.mp3
     - assets/star_wars.mp3
+    - assets/icons/launcher_icon.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -104,3 +106,8 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/launcher_icon.png"
+  adaptive_icon_background: "#0b0b0b"
