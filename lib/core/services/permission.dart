@@ -40,3 +40,15 @@ class AlarmPermissions {
     }
   }
 }
+
+Future<bool> requestMicrophonePermission() async {
+  final status = await Permission.microphone.request();
+  
+  if (status.isPermanentlyDenied) {
+    // Guide user to settings
+    await openAppSettings();
+    return false;
+  }
+  
+  return status.isGranted;
+}

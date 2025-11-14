@@ -1,10 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:alarm/alarm.dart';
-import 'package:alarm/utils/alarm_set.dart';
 import 'package:phii/core/services/notifications.dart';
-import 'package:phii/core/services/permission.dart';
-import 'package:phii/screens/ring.dart';
 import 'package:phii/screens/edit_alarm.dart';
 import 'package:phii/screens/shortcut_button.dart';
 import 'package:phii/widgets/tile.dart';
@@ -26,8 +23,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   late Box<Profile> profilesBox;
   late String selectedProfileId;
 
-  static StreamSubscription<AlarmSet>? ringSubscription;
-
   late AnimationController _fabAnimationController;
   late Animation<double> _fabScaleAnimation;
 
@@ -47,29 +42,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     _fabScaleAnimation = Tween<double>(begin: 1.0, end: 0.9).animate(
       CurvedAnimation(parent: _fabAnimationController, curve: Curves.easeInOut),
     );
-    
-    AlarmPermissions.checkNotificationPermission().then(
-      (_) => AlarmPermissions.checkAndroidScheduleExactAlarmPermission(),
-    );
-    ringSubscription ??= Alarm.ringing.listen(ringingAlarmsChanged);
   }
 
   @override
   void dispose() {
-    ringSubscription?.cancel();
     _fabAnimationController.dispose();
     super.dispose();
-  }
-
-  void ringingAlarmsChanged(AlarmSet alarms) async {
-    if (alarms.alarms.isEmpty) return;
-    await Navigator.push(
-      context,
-      MaterialPageRoute<void>(
-        builder: (context) =>
-            AlarmRingScreen(alarmSettings: alarms.alarms.first),
-      ),
-    );
   }
 
   Future<void> navigateToAlarmScreen(AlarmSettings? settings) async {

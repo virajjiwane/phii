@@ -47,5 +47,9 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>Phii needs microphone access to recognize voice commands for setting alarms</string>
+		<key>NSSpeechRecognitionUsageDescription</key>
+		<string>Phii uses speech recognition to let you control alarms with your voice</string>
 	</dict>
 </plist>

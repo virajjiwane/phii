@@ -1,11 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:alarm/alarm.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:phii/screens/ring.dart';
 import '../models/profile.dart';
 import '../core/themes/app_theme.dart';
 import 'profile_screen.dart';
 import 'edit_alarm.dart';
 import 'settings_screen.dart';
+import '../core/services/speech_service.dart';
+import '../core/services/permission.dart';
+import 'package:alarm/utils/alarm_set.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,6 +26,11 @@ class _HomeScreenState extends State<HomeScreen>
   late Box<Profile> profilesBox;
   late AnimationController _fabAnimationController;
   late Animation<double> _fabScaleAnimation;
+  late SpeechService _speechService;
+  bool _isListening = false;
+  String _recognizedText = '';
+  bool _showSpeechBubble = false;
+  static StreamSubscription<AlarmSet>? ringSubscription;
 
   @override
   void initState() {
@@ -35,11 +47,157 @@ class _HomeScreenState extends State<HomeScreen>
     _fabScaleAnimation = Tween<double>(begin: 1.0, end: 0.9).animate(
       CurvedAnimation(parent: _fabAnimationController, curve: Curves.easeInOut),
     );
+
+    
+    AlarmPermissions.checkNotificationPermission().then(
+      (_) => AlarmPermissions.checkAndroidScheduleExactAlarmPermission(),
+    );
+    requestMicrophonePermission().then((granted) {
+      if (!granted) {
+        // Show a snackbar or dialog to inform the user
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Microphone permission is required for voice commands.'),
+          ),
+        );
+      } else {
+        // Optionally show a confirmation that permission was granted
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Microphone permission granted. You can now use voice commands.'),
+          ),
+        );
+      }
+    });
+    ringSubscription ??= Alarm.ringing.listen(ringingAlarmsChanged);
+
+    _initializeSpeech();
   }
 
+  void ringingAlarmsChanged(AlarmSet alarms) async {
+    if (alarms.alarms.isEmpty) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) =>
+            AlarmRingScreen(alarmSettings: alarms.alarms.first),
+      ),
+    );
+  }
+
+  void _initializeSpeech() {
+    _speechService = SpeechService();
+
+    _speechService.onSpeechResult = (text) {
+      setState(() {
+        _recognizedText = text;
+        _showSpeechBubble = true;
+      });
+    };
+
+    _speechService.onListeningStateChanged = (isListening) {
+      setState(() {
+        _isListening = isListening;
+        if (!isListening) {
+          // Hide speech bubble after a delay when listening stops
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) {
+              setState(() {
+                _showSpeechBubble = false;
+              });
+            }
+          });
+        }
+      });
+    };
+  }
+
+  void _showCommandFeedback(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.mic, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  void _showVoiceCommandsHelp() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.mic, color: Colors.deepOrange),
+            SizedBox(width: 8),
+            Text('Voice Commands'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: SpeechCommand.values
+                .where((cmd) => cmd != SpeechCommand.unknown)
+                .map((cmd) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            cmd.description,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            cmd.example,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ))
+                .toList(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _toggleSpeechListening(BuildContext context) async {
+    if (_isListening) {
+      await _speechService.stopListening();
+    } else {
+      final initialized = await _speechService.initialize(context);
+      if (initialized) {
+        await _speechService.startListening(context);
+      } else {
+        _showCommandFeedback('Speech recognition not available');
+      }
+    }
+  }
+  
   @override
   void dispose() {
     _fabAnimationController.dispose();
+    _speechService.dispose();
+    ringSubscription?.cancel();
     super.dispose();
   }
 
@@ -108,47 +266,104 @@ class _HomeScreenState extends State<HomeScreen>
         ),
         centerTitle: false,
         actions: [
-            PopupMenuButton<String>(
+          // Voice command button
+          IconButton(
+            icon: Icon(
+              _isListening ? Icons.mic : Icons.mic_none,
+              color: _isListening ? Colors.red : colorScheme.primary,
+            ),
+            onPressed: () => _toggleSpeechListening(context),
+            tooltip: 'Voice Commands',
+          ),
+          PopupMenuButton<String>(
             icon: Icon(Icons.more_vert_rounded, color: colorScheme.onSurface),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
             onSelected: (value) {
               if (value == 'settings') {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                builder: (context) => const SettingsScreen(),
-                ),
-              );
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SettingsScreen(),
+                  ),
+                );
               }
             },
             itemBuilder: (BuildContext context) => [
               PopupMenuItem<String>(
-              value: 'settings',
-              child: Row(
-                children: [
-                Icon(Icons.settings_outlined,
-                  color: colorScheme.primary, size: 20),
-                const SizedBox(width: 12),
-                const Text('Settings'),
-                ],
-              ),
+                value: 'settings',
+                child: Row(
+                  children: [
+                    Icon(Icons.settings_outlined,
+                        color: colorScheme.primary, size: 20),
+                    const SizedBox(width: 12),
+                    const Text('Settings'),
+                  ],
+                ),
               ),
             ],
           ),
         ],
       ),
       body: SafeArea(
-        child: ValueListenableBuilder(
-          valueListenable: profilesBox.listenable(),
-          builder: (context, Box<Profile> box, _) {
-            final profiles = box.values.toList();
+        child: Stack(
+          children: [
+            ValueListenableBuilder(
+              valueListenable: profilesBox.listenable(),
+              builder: (context, Box<Profile> box, _) {
+                final profiles = box.values.toList();
 
-            return profiles.isEmpty
-                ? _buildEmptyState(colorScheme, textTheme)
-                : _buildProfilesList(profiles, colorScheme, textTheme);
-          },
+                return profiles.isEmpty
+                    ? _buildEmptyState(colorScheme, textTheme)
+                    : _buildProfilesList(profiles, colorScheme, textTheme);
+              },
+            ),
+            // Speech bubble overlay
+            if (_showSpeechBubble && _recognizedText.isNotEmpty)
+              Positioned(
+                top: 16,
+                left: 16,
+                right: 16,
+                child: AnimatedOpacity(
+                  opacity: _showSpeechBubble ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 300),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(25),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _isListening ? Icons.mic : Icons.check_circle,
+                          color: _isListening
+                              ? Colors.red
+                              : colorScheme.primary,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _recognizedText,
+                            style: textTheme.bodyLarge?.copyWith(
+                              color: colorScheme.onPrimaryContainer,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
       floatingActionButton: ValueListenableBuilder(
@@ -169,9 +384,7 @@ class _HomeScreenState extends State<HomeScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             Icon(Icons.alarm_off_outlined,
                 size: 24, color: colorScheme.onSurface.withValues(alpha: 0.6)),
             const SizedBox(width: 8),
