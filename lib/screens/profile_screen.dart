@@ -7,6 +7,8 @@ import 'package:phii/screens/shortcut_button.dart';
 import 'package:phii/widgets/tile.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/profile.dart';
+import '../core/services/alarm_service.dart';
+import '../core/services/profile_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, required this.profileId});
@@ -22,6 +24,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   Notifications? notifications;
   late Box<Profile> profilesBox;
   late String selectedProfileId;
+  final AlarmService _alarmService = AlarmService();
+  final ProfileService _profileService = ProfileService();
 
   late AnimationController _fabAnimationController;
   late Animation<double> _fabScaleAnimation;
@@ -76,15 +80,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   void _deleteAlarm(int alarmId) {
-    // Remove from Alarm
-    Alarm.stop(alarmId);
-    
-    // Remove from profile
-    final profile = profilesBox.get(selectedProfileId);
-    if (profile != null) {
-      profile.alarmIds.remove(alarmId);
-      profile.save();
-    }
+    // Delete alarm using AlarmService
+    _alarmService.deleteAlarm(alarmId, profileId: selectedProfileId);
   }
 
   @override
@@ -301,20 +298,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   String _getAlarmLabel(AlarmSettings alarm) {
-    final now = DateTime.now();
-    final alarmTime = alarm.dateTime;
-    final difference = alarmTime.difference(now);
-    
-    if (difference.isNegative) {
-      return 'Passed';
-    } else if (difference.inMinutes < 60) {
-      return 'In ${difference.inMinutes} minutes';
-    } else if (difference.inHours < 24) {
-      return 'In ${difference.inHours} hours';
-    } else {
-      final days = difference.inDays;
-      return 'In $days day${days > 1 ? 's' : ''}';
-    }
+    return _alarmService.getAlarmLabel(alarm);
   }
 
   Widget _buildFloatingActionButtons(ColorScheme colorScheme, List<int> alarmIds) {
@@ -353,14 +337,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: () {
-                      final profile = profilesBox.get(selectedProfileId);
-                      if (profile != null) {
-                        for (final alarmId in profile.alarmIds) {
-                          Alarm.stop(alarmId);
-                        }
-                        profile.alarmIds.clear();
-                        profile.save();
-                      }
+                      // Stop all alarms in profile using ProfileService
+                      _profileService.stopAllAlarmsInProfile(selectedProfileId);
                     },
                     borderRadius: BorderRadius.circular(16),
                     child: Padding(
@@ -459,18 +437,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           ),
           FilledButton(
             onPressed: () {
-              final profile = profilesBox.get(selectedProfileId);
-              if (profile != null) {
-                // Stop all alarms
-                for (final alarmId in profile.alarmIds) {
-                  Alarm.stop(alarmId);
-                }
-                // Delete profile
-                profilesBox.delete(selectedProfileId);
-                // Navigate back to home screen
-                Navigator.pop(context); // Close dialog
-                Navigator.pop(context); // Go back to home screen
-              }
+              // Delete profile using ProfileService
+              _profileService.deleteProfile(selectedProfileId, stopAlarms: true);
+              // Navigate back to home screen
+              Navigator.pop(context); // Close dialog
+              Navigator.pop(context); // Go back to home screen
             },
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:alarm/alarm.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:phii/core/services/command_handler_service.dart';
 import 'package:phii/models/speech_command.dart';
 import 'package:phii/screens/ring.dart';
 import '../models/profile.dart';
@@ -12,6 +13,8 @@ import 'edit_alarm.dart';
 import 'settings_screen.dart';
 import '../core/services/speech_service.dart';
 import '../core/services/permission.dart';
+import '../core/services/alarm_service.dart';
+import '../core/services/profile_service.dart';
 import 'package:alarm/utils/alarm_set.dart';
 import 'package:logging/logging.dart';
 
@@ -33,6 +36,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _fabAnimationController;
   late Animation<double> _fabScaleAnimation;
   late SpeechService _speechService;
+  final AlarmService _alarmService = AlarmService();
+  final ProfileService _profileService = ProfileService();
   bool _isListening = false;
   String _recognizedText = '';
   bool _showSpeechBubble = false;
@@ -127,6 +132,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         }
       });
     };
+
+    _speechService.onCommandFeedback = (message) {
+      _log.fine('Command feedback received: $message');
+      if (message.isNotEmpty) {
+        _showCommandFeedback(message);
+      }
+    };
   }
 
   void _showCommandFeedback(String message) {
@@ -145,61 +157,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
-  }
-
-  void _showVoiceCommandsHelp() {
-    _log.info('Showing voice commands help dialog');
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.mic, color: Colors.deepOrange),
-            SizedBox(width: 8),
-            Text('Voice Commands'),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: SpeechCommand.values
-                .where((cmd) => cmd != SpeechCommand.unknown)
-                .map((cmd) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            cmd.description,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            cmd.examples.join('\n'),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ))
-                .toList(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Got it'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _toggleSpeechListening(BuildContext context) async {
+  }void _toggleSpeechListening(BuildContext context) async {
     _log.info('Toggling speech listening, current state: $_isListening');
     if (_isListening) {
       await _speechService.stopListening();
@@ -225,44 +183,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Future<AlarmSettings?> _getMostRecentAlarm(Profile profile) async {
     _log.fine('Getting most recent alarm for profile: ${profile.name}');
-    if (profile.alarmIds.isEmpty) return null;
-
-    AlarmSettings? mostRecent;
-    DateTime? closestTime;
-    final now = DateTime.now();
-
-    for (final alarmId in profile.alarmIds) {
-      final alarm = await Alarm.getAlarm(alarmId);
-      if (alarm != null) {
-        final difference = alarm.dateTime.difference(now);
-        if (!difference.isNegative) {
-          if (closestTime == null || alarm.dateTime.isBefore(closestTime)) {
-            closestTime = alarm.dateTime;
-            mostRecent = alarm;
-          }
-        }
-      }
-    }
-
-    _log.fine('Most recent alarm: ${mostRecent?.id ?? "none"}');
-    return mostRecent;
+    return await _alarmService.getMostRecentAlarm(profile.alarmIds);
   }
 
   String _getAlarmLabel(AlarmSettings alarm) {
-    final now = DateTime.now();
-    final alarmTime = alarm.dateTime;
-    final difference = alarmTime.difference(now);
-
-    if (difference.isNegative) {
-      return 'Passed';
-    } else if (difference.inMinutes < 60) {
-      return 'In ${difference.inMinutes} minutes';
-    } else if (difference.inHours < 24) {
-      return 'In ${difference.inHours} hours';
-    } else {
-      final days = difference.inDays;
-      return 'In $days day${days > 1 ? 's' : ''}';
-    }
+    return _alarmService.getAlarmLabel(alarm);
   }
 
   void _navigateToProfile(String profileId) {
@@ -506,7 +431,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           // Swipe up gesture detection to start listening
           Expanded(
             child: GestureDetector(
-              onTap: () => _showVoiceCommandsHelp(),
+              onTap: () => CommandHandlerService().showVoiceCommandsHelp(context),
               behavior: HitTestBehavior.opaque,
               onVerticalDragUpdate: (details) {
                 if (details.delta.dy < 0) {
@@ -902,13 +827,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void _deleteProfile(Profile profile) {
     _log.info(
         'Deleting profile: ${profile.name} with ${profile.alarmIds.length} alarms');
-    // Stop all alarms in the profile
-    for (final alarmId in profile.alarmIds) {
-      _log.fine('Stopping alarm: $alarmId');
-      Alarm.stop(alarmId);
-    }
-    // Delete the profile
-    profilesBox.delete(profile.id);
+    // Delete the profile using ProfileService
+    _profileService.deleteProfile(profile.id, stopAlarms: true);
     _log.info('Profile deleted: ${profile.id}');
   }
 }

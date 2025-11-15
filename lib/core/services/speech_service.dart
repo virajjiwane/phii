@@ -1,5 +1,6 @@
 // lib/core/services/speech_service.dart
 import 'package:flutter/material.dart';
+import 'package:phii/core/services/command_handler_service.dart';
 import 'package:phii/core/services/gemini_service.dart';
 import 'package:phii/models/speech_command.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -20,9 +21,8 @@ class SpeechService {
   // Callbacks for UI updates
   Function(String text)? onSpeechResult;
   Function(bool isListening)? onListeningStateChanged;
-  Function(ParsedSpeechCommand command)?
-      onCommandDetected;
-Function(String text)? onCommandFeedback;
+  Function(ParsedSpeechCommand command)? onCommandDetected;
+  Function(String text)? onCommandFeedback;
 
   /// Initialize the speech recognition engine
   Future<bool> initialize(BuildContext context) async {
@@ -50,7 +50,7 @@ Function(String text)? onCommandFeedback;
         _log.info('Gemini Service initialized');
       } else {
         _log.warning('Gemini Service failed to initialize');
-      }      
+      }
 
       if (await _ttsService.initializeTTS()) {
         _log.info('TTS Service initialized');
@@ -104,13 +104,27 @@ Function(String text)? onCommandFeedback;
               _geminiService.getCommandFeedback(command).then((feedback) {
                 // Optionally, provide feedback to the user
                 _log.info('Command feedback: $feedback');
-                onCommandFeedback?.call(feedback);
-                _ttsService.speak(feedback);
+                _ttsService.speak(feedback).whenComplete(() {
+                  CommandHandlerService()
+                      .executeCommand(command, context)
+                      .then((resultMessage) {
+                    _log.info('Command execution result: $resultMessage');
+                    onCommandFeedback?.call(resultMessage);
+                    _ttsService.speak(resultMessage);
+                  }).onError((e, stackTrace) {
+                    _log.severe('Error executing command: $e');
+                    _ttsService.speak(
+                        'Sorry, there was an error executing the command.');
+                  });
+                });
               });
             });
           }
         },
-        listenOptions: stt.SpeechListenOptions(listenMode: stt.ListenMode.confirmation,cancelOnError: true,partialResults: true),
+        listenOptions: stt.SpeechListenOptions(
+            listenMode: stt.ListenMode.confirmation,
+            cancelOnError: true,
+            partialResults: true),
       );
 
       _isListening = true;
@@ -136,7 +150,6 @@ Function(String text)? onCommandFeedback;
       _log.severe('Failed to stop listening: $e');
     }
   }
-  
 
   /// Check if currently listening
   bool get isListening => _isListening;

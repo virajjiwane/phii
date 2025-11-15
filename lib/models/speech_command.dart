@@ -4,6 +4,7 @@ enum SpeechCommand {
   stopAll,
   showAlarms,
   createProfile,
+  deleteAllProfiles,
   ringNow,
   openSettings,
   goHome,
@@ -24,6 +25,8 @@ extension SpeechCommandExtension on SpeechCommand {
         return 'Display all configured alarms';
       case SpeechCommand.createProfile:
         return 'Create a new alarm profile/group';
+      case SpeechCommand.deleteAllProfiles:
+        return 'Delete all profiles and their alarms';
       case SpeechCommand.ringNow:
         return 'Trigger an alarm immediately for testing';
       case SpeechCommand.openSettings:
@@ -79,6 +82,14 @@ extension SpeechCommandExtension on SpeechCommand {
           'Create alarm group weekend',
           'New profile gym',
         ];
+      case SpeechCommand.deleteAllProfiles:
+        return [
+          'Delete all profiles',
+          'Remove all profiles',
+          'Clear all profiles',
+          'Delete everything',
+          'Reset all profiles',
+        ];
       case SpeechCommand.ringNow:
         return [
           'Ring now',
@@ -130,6 +141,8 @@ extension SpeechCommandExtension on SpeechCommand {
         return '📋';
       case SpeechCommand.createProfile:
         return '📁';
+      case SpeechCommand.deleteAllProfiles:
+        return '🗑️';
       case SpeechCommand.ringNow:
         return '🔔';
       case SpeechCommand.openSettings:
@@ -155,6 +168,8 @@ extension SpeechCommandExtension on SpeechCommand {
         return 'show_alarms';
       case SpeechCommand.createProfile:
         return 'create_profile';
+      case SpeechCommand.deleteAllProfiles:
+        return 'delete_all_profiles';
       case SpeechCommand.ringNow:
         return 'ring_now';
       case SpeechCommand.openSettings:
