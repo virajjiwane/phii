@@ -5,6 +5,7 @@ import 'package:alarm/utils/alarm_set.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:phii/screens/home_screen.dart';
 import '../models/profile.dart';
 
 class AlarmRingScreen extends StatefulWidget {
@@ -69,7 +70,12 @@ class _AlarmRingScreenState extends State<AlarmRingScreen>
       if (alarms.containsId(widget.alarmSettings.id)) return;
       _log.info('Alarm ${widget.alarmSettings.id} stopped ringing.');
       _ringingSubscription?.cancel();
-      if (mounted) Navigator.pop(context);
+      if (mounted) Navigator.popUntil(context, (r) => r.isFirst);
+      else {
+        Navigator.push(context, MaterialPageRoute(
+          builder: (context) => const HomeScreen(),
+        ));
+      }
     });
   }
 
@@ -88,9 +94,12 @@ class _AlarmRingScreenState extends State<AlarmRingScreen>
         dateTime: DateTime.now().add(const Duration(minutes: 1)),
       ),
     );
-    if (mounted) {
-      Navigator.pop(context);
-    }
+    if (mounted) Navigator.popUntil(context, (r) => r.isFirst);
+      else {
+        Navigator.push(context, MaterialPageRoute(
+          builder: (context) => const HomeScreen(),
+        ));
+      }
   }
 
   Future<void> _handleStop() async {
@@ -108,9 +117,12 @@ class _AlarmRingScreenState extends State<AlarmRingScreen>
       }
     }
     
-    if (mounted) {
-      Navigator.pop(context);
-    }
+    if (mounted) Navigator.popUntil(context, (r) => r.isFirst);
+      else {
+        Navigator.push(context, MaterialPageRoute(
+          builder: (context) => const HomeScreen(),
+        ));
+      }
   }
 
   @override

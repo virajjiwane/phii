@@ -1,3 +1,4 @@
+import 'package:alarm/model/alarm_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:phii/models/speech_command.dart';
@@ -91,6 +92,13 @@ class CommandHandlerService {
         alarmTime = alarmTime.add(const Duration(days: 1));
       }
 
+      // Create the alarm
+      final alarmId = await _alarmService.createAlarmAt(dateTime: alarmTime);
+      
+      if (alarmId == null) {
+        return 'Failed to create alarm.';
+      }
+
       // Get or create profile
       Profile? profile;
       if (profileName != null) {
@@ -101,19 +109,13 @@ class CommandHandlerService {
         if (profiles.isNotEmpty) {
           profile = profiles.first;
         } else {
-          profile = await _profileService.createProfile(name: 'Default');
+          AlarmSettings? alarmSettings = await _alarmService.getAlarm(alarmId);
+          profile = await _profileService.createProfile(name: alarmSettings?.notificationSettings.title ?? 'Default');
         }
       }
 
       if (profile == null) {
         return 'Failed to create or find profile.';
-      }
-
-      // Create the alarm
-      final alarmId = await _alarmService.createAlarmAt(dateTime: alarmTime);
-      
-      if (alarmId == null) {
-        return 'Failed to create alarm.';
       }
 
       // Add to profile
@@ -141,6 +143,13 @@ class CommandHandlerService {
 
       final duration = Duration(hours: hours, minutes: minutes);
 
+      // Create the alarm
+      final alarmId = await _alarmService.createAlarmIn(duration: duration);
+      
+      if (alarmId == null) {
+        return 'Failed to create alarm.';
+      }
+
       // Get or create profile
       Profile? profile;
       if (profileName != null) {
@@ -150,19 +159,13 @@ class CommandHandlerService {
         if (profiles.isNotEmpty) {
           profile = profiles.first;
         } else {
-          profile = await _profileService.createProfile(name: 'Default');
+          AlarmSettings? alarmSettings = await _alarmService.getAlarm(alarmId);
+          profile = await _profileService.createProfile(name: alarmSettings?.notificationSettings.title ?? 'Default');
         }
       }
 
       if (profile == null) {
         return 'Failed to create or find profile.';
-      }
-
-      // Create the alarm
-      final alarmId = await _alarmService.createAlarmIn(duration: duration);
-      
-      if (alarmId == null) {
-        return 'Failed to create alarm.';
       }
 
       // Add to profile
@@ -263,6 +266,13 @@ class CommandHandlerService {
     try {
       final profileName = command.parameters['profile'] as String?;
 
+      // Create ring now alarm
+      final alarmId = await _alarmService.createRingNowAlarm();
+      
+      if (alarmId == null) {
+        return 'Failed to create test alarm.';
+      }
+      
       // Get or create profile
       Profile? profile;
       if (profileName != null) {
@@ -272,19 +282,13 @@ class CommandHandlerService {
         if (profiles.isNotEmpty) {
           profile = profiles.first;
         } else {
-          profile = await _profileService.createProfile(name: 'Default');
+          AlarmSettings? alarmSettings = await _alarmService.getAlarm(alarmId);
+          profile = await _profileService.createProfile(name: alarmSettings?.notificationSettings.title ?? 'Default');
         }
       }
 
       if (profile == null) {
         return 'Failed to create or find profile.';
-      }
-
-      // Create ring now alarm
-      final alarmId = await _alarmService.createRingNowAlarm();
-      
-      if (alarmId == null) {
-        return 'Failed to create test alarm.';
       }
 
       // Add to profile
