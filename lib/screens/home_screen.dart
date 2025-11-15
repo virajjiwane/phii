@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:alarm/alarm.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:phii/models/speech_command.dart';
 import 'package:phii/screens/ring.dart';
 import '../models/profile.dart';
 import '../core/themes/app_theme.dart';
@@ -175,7 +176,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            cmd.example,
+                            cmd.examples.join('\n'),
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[600],
