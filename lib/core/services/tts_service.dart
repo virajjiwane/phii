@@ -62,7 +62,7 @@ class TTSService {
         _log.warning('TTS not initialized. Initializing now.');
         await initializeTTS();
       }
-      if (null == text || text.isEmpty) {
+      if (text.isEmpty) {
         _log.warning('No text provided to speak.');
         return;
       }
