@@ -31,7 +31,31 @@ Phii supports natural voice commands including:
 - "Show my alarms"
 - "Delete all profiles"
 
+## 📥 Downloads
+
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/yourusername/phii?color=orange&label=Latest%20Release&style=for-the-badge)](https://github.com/virajjiwane/phii/releases/latest)
+[![GitHub downloads](https://img.shields.io/github/downloads/yourusername/phii/total?color=orange&style=for-the-badge)](https://github.com/virajjiwane/phii/releases)
+
+| Platform | Download | Status |
+|----------|----------|--------|
+| 🤖 Android | [Download APK](https://github.com/virajjiwane/phii/releases/latest) | ✅ Available |
+| 🍎 iOS | Coming Soon | ⏳ Pending |
+
+### Security Note
+This APK is currently unsigned for testing purposes. A production-signed 
+version will be published to Google Play Store soon.
+
+## 📈 Stats
+
+![GitHub release downloads](https://img.shields.io/github/downloads/virajjiwane/phii/total?style=flat-square)
+![GitHub repo stars](https://img.shields.io/github/stars/virajjiwane/phii?style=flat-square)
 ## 🚀 Getting Started
+
+## 🎬 Demo Video
+
+[![Phii Demo](https://img.youtube.com/vi/ycxgpHq8i14/maxresdefault.jpg)](https://youtu.be/ycxgpHq8i14)
+
+👆 Click to watch the full demo
 
 ### Prerequisites
 
@@ -80,6 +104,45 @@ Phii follows a clean architecture with separation of concerns:
 - [Speech to Text](https://pub.dev/packages/speech_to_text) - Voice recognition
 - [Google Fonts](https://pub.dev/packages/google_fonts) - Typography
 - [Gemini AI](https://ai.google.dev/) - Natural language processing
+
+## 📱 Screenshots
+
+<div align="center">
+
+### Home Screen
+<img src="docs/screenshots/home.jpg" width="250" alt="Home Screen"/>
+
+### Profile List
+<img src="docs/screenshots/profile-list.jpg" width="250" alt="Profile List"/>
+
+### Alarms List
+<img src="docs/screenshots/alarms-list.jpg" width="250" alt="Alarms List"/>
+
+### Edit Alarm
+<img src="docs/screenshots/alarm-edit.jpg" width="250" alt="Edit Alarm"/>
+
+### Set Time
+<img src="docs/screenshots/set-time.jpg" width="250" alt="Set Time"/>
+
+### Voice Commands
+<img src="docs/screenshots/voice-commands.jpg" width="250" alt="Voice Commands"/>
+
+### Alarm Ringing
+<img src="docs/screenshots/ringing.jpg" width="250" alt="Alarm Ringing"/>
+
+### Audio Settings
+<img src="docs/screenshots/audio-settings.jpg" width="250" alt="Audio Settings"/>
+
+### Volume Settings
+<img src="docs/screenshots/volume-setting.jpg" width="250" alt="Volume Settings"/>
+
+### App Settings
+<img src="docs/screenshots/app-settings.jpg" width="250" alt="App Settings"/>
+
+### Test Ringing
+<img src="docs/screenshots/test-ringing.jpg" width="250" alt="Test Ringing"/>
+
+</div>
 
 ## 📝 License
 

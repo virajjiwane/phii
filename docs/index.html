@@ -65,6 +65,65 @@
         .hero {
             padding: 100px 0;
             text-align: center;
+            position: relative;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .mockup-banner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+            margin-top: 60px;
+            position: relative;
+        }
+
+        .mockup-phone {
+            width: 280px;
+            height: auto;
+            border-radius: 30px;
+            filter: drop-shadow(0 20px 60px rgba(255, 157, 0, 0.3)) drop-shadow(0 0 0 rgba(255, 255, 255, 0.1));
+            transition: transform 0.4s ease;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .mockup-phone:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .mockup-phone:nth-child(2) {
+            animation-delay: 3s;
+        }
+
+        .mockup-phone:hover {
+            transform: translateY(-10px) scale(1.05);
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .mockup-banner {
+                flex-direction: column;
+                gap: 30px;
+            }
+
+            .mockup-phone {
+                width: 220px;
+            }
         }
 
         .hero h1 {
@@ -220,6 +279,7 @@
         }
 
         @keyframes pulse {
+
             0%,
             100% {
                 opacity: 1;
@@ -294,18 +354,27 @@
     <!-- Hero Section -->
     <section class="hero">
         <div class="container">
-            <h1>AI-Powered Alarms<br>That Actually Wake You Up</h1>
-            <p class="subtitle">
-                Smart alarm management with computer vision, natural language processing,<br>
-                and intelligent wake-up patterns. Built with Flutter & Gemini AI.
-            </p>
-            <div class="cta-buttons">
-                <a href="https://github.com/virajjiwane/phii" class="btn btn-primary">
-                    ⭐ View on GitHub
-                </a>
-                <a href="#demo" class="btn btn-secondary">
-                    ▶ Watch Demo
-                </a>
+            <div class="hero-content">
+                <h1>AI-Powered Alarms<br>That Actually Wake You Up</h1>
+                <p class="subtitle">
+                    Smart alarm management with computer vision, natural language processing,<br>
+                    and intelligent wake-up patterns. Built with Flutter & Gemini AI.
+                </p>
+                <div class="cta-buttons">
+                    <a href="https://github.com/virajjiwane/phii" class="btn btn-primary">
+                        ⭐ View on GitHub
+                    </a>
+                    <a href="https://youtu.be/ycxgpHq8i14" class="btn btn-secondary" target="_blank"
+                        rel="noopener noreferrer">
+                        ▶ Watch Demo
+                    </a>
+                </div>
+            </div>
+
+            <!-- Mockup Banner -->
+            <div class="mockup-banner">
+                <img src="screenshots/mockups/home-portrait.png" alt="Phii Home Screen" class="mockup-phone">
+                <img src="screenshots/mockups/profile-list-portrait.png" alt="Phii Profile List" class="mockup-phone">
             </div>
         </div>
     </section>
@@ -384,11 +453,11 @@
             <h2 class="section-title">See It In Action</h2>
             <div class="video-container">
                 <div class="video-placeholder">
-                    📹 Demo Video Coming Soon<br><br>
                     <a href="https://github.com/virajjiwane/phii" style="color: #ff9d00;">View Screenshots on GitHub
                         →</a>
                 </div>
-                <!-- Replace with: <iframe width="100%" height="450" src="YOUR_YOUTUBE_VIDEO" frameborder="0" allowfullscreen></iframe> -->
+                <iframe width="100%" height="450" src="https://youtu.be/ycxgpHq8i14" frameborder="0"
+                    allowfullscreen></iframe>
             </div>
         </div>
     </section>
