@@ -3,7 +3,7 @@ import 'package:flutter_gemini/flutter_gemini.dart';
 import 'package:logging/logging.dart';
 import '../../models/speech_command.dart';
 
-const API_KEY = "AIzaSyBA8cyQEDIffw_08ld5Y-Z4secmHCkoTlA";
+const API_KEY = "Grab from secret before building builds";
 
 class GeminiSpeechService {
   static final _log = Logger('GeminiSpeechService');
