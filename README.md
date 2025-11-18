@@ -9,6 +9,23 @@
 [![Material 3](https://img.shields.io/badge/Material_3-Design-757575?style=for-the-badge&logo=material-design&logoColor=white)](https://m3.material.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 
+## 📋 Table of Contents
+
+- [✨ Features](#features)
+- [🎤 Voice Commands](#voice-commands)
+- [📥 Downloads](#downloads)
+- [📈 Stats](#stats)
+- [🎬 Demo Video](#demo-video)
+- [🚀 Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+- [🏗️ Architecture](#architecture)
+- [🛠️ Built With](#built-with)
+- [📱 Screenshots](#screenshots)
+- [📝 License](#license)
+- [👨‍💻 Author](#author)
+
+<a id="features"></a>
 ## ✨ Features
 
 - **🎙️ Voice Commands**: Control alarms with natural voice commands powered by Gemini AI
@@ -17,8 +34,9 @@
 - **⏱️ Flexible Scheduling**: Set alarms at specific times or durations from now
 - **🔔 Ring Testing**: Test your alarm sounds instantly
 - **🗣️ Text-to-Speech**: Get audio feedback for your commands
-- **🌙 Dark Mode**: Full theme support for day and night
+- 🌙 **Dark Mode**: Full theme support for day and night
 
+<a id="voice-commands"></a>
 ## 🎤 Voice Commands
 
 Phii supports natural voice commands including:
@@ -31,6 +49,7 @@ Phii supports natural voice commands including:
 - "Show my alarms"
 - "Delete all profiles"
 
+<a id="downloads"></a>
 ## 📥 Downloads
 
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/yourusername/phii?color=orange&label=Latest%20Release&style=for-the-badge)](https://github.com/virajjiwane/phii/releases/latest)
@@ -45,15 +64,19 @@ Phii supports natural voice commands including:
 This APK is currently unsigned for testing purposes. A production-signed 
 version will be published to Google Play Store soon.
 
+<a id="stats"></a>
 ## 📈 Stats
 
 ![GitHub release downloads](https://img.shields.io/github/downloads/virajjiwane/phii/total?style=flat-square)
 ![GitHub repo stars](https://img.shields.io/github/stars/virajjiwane/phii?style=flat-square)
+
+<a id="getting-started"></a>
 ## 🚀 Getting Started
 
+<a id="demo-video"></a>
 ## 🎬 Demo Video
 
-[![Phii Demo](https://img.youtube.com/vi/ycxgpHq8i14/maxresdefault.jpg)](https://youtu.be/ycxgpHq8i14)
+[![Phii Demo](https://i9.ytimg.com/vi/ycxgpHq8i14/mq3.jpg?sqp=CICE8MgG&rs=AOn4CLDuieTcQeW7NzJaWj1q4Yy2nHZmiw)](https://youtu.be/ycxgpHq8i14)
 
 👆 Click to watch the full demo
 
@@ -81,6 +104,7 @@ flutter pub get
 flutter run
 ```
 
+<a id="architecture"></a>
 ## 🏗️ Architecture
 
 Phii follows a clean architecture with separation of concerns:
@@ -96,6 +120,7 @@ Phii follows a clean architecture with separation of concerns:
 - **Screens**: UI components (HomeScreen, ProfileScreen, EditAlarmScreen)
 - **Widgets**: Reusable UI components
 
+<a id="built-with"></a>
 ## 🛠️ Built With
 
 - [Flutter](https://flutter.dev/) - UI framework
@@ -105,49 +130,96 @@ Phii follows a clean architecture with separation of concerns:
 - [Google Fonts](https://pub.dev/packages/google_fonts) - Typography
 - [Gemini AI](https://ai.google.dev/) - Natural language processing
 
+<a id="screenshots"></a>
 ## 📱 Screenshots
 
-<div align="center">
+<div align="center" style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
+
+<div style="flex: 0 0 auto;">
 
 ### Home Screen
 <img src="docs/screenshots/home.jpg" width="250" alt="Home Screen"/>
 
+</div>
+
+<div style="flex: 0 0 auto;">
+
 ### Profile List
 <img src="docs/screenshots/profile-list.jpg" width="250" alt="Profile List"/>
+
+</div>
+
+<div style="flex: 0 0 auto;">
 
 ### Alarms List
 <img src="docs/screenshots/alarms-list.jpg" width="250" alt="Alarms List"/>
 
+</div>
+
+<div style="flex: 0 0 auto;">
+
 ### Edit Alarm
 <img src="docs/screenshots/alarm-edit.jpg" width="250" alt="Edit Alarm"/>
+
+</div>
+
+<div style="flex: 0 0 auto;">
 
 ### Set Time
 <img src="docs/screenshots/set-time.jpg" width="250" alt="Set Time"/>
 
+</div>
+
+<div style="flex: 0 0 auto;">
+
 ### Voice Commands
 <img src="docs/screenshots/voice-commands.jpg" width="250" alt="Voice Commands"/>
+
+</div>
+
+<div style="flex: 0 0 auto;">
 
 ### Alarm Ringing
 <img src="docs/screenshots/ringing.jpg" width="250" alt="Alarm Ringing"/>
 
+</div>
+
+<div style="flex: 0 0 auto;">
+
 ### Audio Settings
 <img src="docs/screenshots/audio-settings.jpg" width="250" alt="Audio Settings"/>
+
+</div>
+
+<div style="flex: 0 0 auto;">
 
 ### Volume Settings
 <img src="docs/screenshots/volume-setting.jpg" width="250" alt="Volume Settings"/>
 
+</div>
+
+<div style="flex: 0 0 auto;">
+
 ### App Settings
 <img src="docs/screenshots/app-settings.jpg" width="250" alt="App Settings"/>
+
+</div>
+
+<div style="flex: 0 0 auto;">
 
 ### Test Ringing
 <img src="docs/screenshots/test-ringing.jpg" width="250" alt="Test Ringing"/>
 
 </div>
 
+</div>
+
+<a id="license"></a>
 ## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+<a id="author"></a>
 ## 👨‍💻 Author
 
 **Viraj Jiwane**
